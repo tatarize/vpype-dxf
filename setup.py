@@ -6,7 +6,7 @@ with open("README.md") as f:
 
 setup(
     name="vpype-dxf",
-    version="0.0.1",
+    version="0.0.2",
     description="vpype dxf plugin",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -24,8 +24,8 @@ setup(
         "click",
         "vpype",
         "numpy",
-        "ezdxf>=0.14",
-        "svgelements"
+        "ezdxf>=0.14.0",
+        "svgelements>=1.4.0"
     ],
     entry_points="""
             [vpype.plugins]
