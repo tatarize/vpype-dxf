@@ -131,6 +131,8 @@ def entity_to_svg(elements, dxf, entity, scale):
             x2=entity.dxf.end[0],
             y2=entity.dxf.end[1],
         )
+    elif entity.dxftype() == "POINT":
+        element = Path(Move(entity.dxf.location)) + "z"
     elif entity.dxftype() == "POLYLINE":
         # https://ezdxf.readthedocs.io/en/stable/dxfentities/lwpolyline.html
         if entity.is_2d_polyline:
