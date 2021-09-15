@@ -2,7 +2,13 @@ import click
 import ezdxf
 import vpype as vp
 from ezdxf import units
-from ezdxf.tools.rgb import DXF_DEFAULT_COLORS, int2rgb
+try:
+    # ezdxf <= 0.6.14
+    from ezdxf.tools.rgb import DXF_DEFAULT_COLORS, int2rgb
+except ImportError:
+    # ezdxf > 0.6.14
+    from ezdxf import int2rgb
+    from ezdxf.colors import DXF_DEFAULT_COLORS
 from ezdxf.units import decode
 from svgelements import (
     SVG_ATTR_VECTOR_EFFECT,
@@ -125,6 +131,8 @@ def entity_to_svg(elements, dxf, entity, scale):
             x2=entity.dxf.end[0],
             y2=entity.dxf.end[1],
         )
+    elif entity.dxftype() == "POINT":
+        element = Path(Move(entity.dxf.location)) + "z"
     elif entity.dxftype() == "POLYLINE":
         # https://ezdxf.readthedocs.io/en/stable/dxfentities/lwpolyline.html
         if entity.is_2d_polyline:
@@ -267,13 +275,27 @@ def entity_to_svg(elements, dxf, entity, scale):
             for b in entity.construction_tool().bezier_decomposition():
                 if len(element) == 0:
                     element.move((b[0][0], b[0][1]))
-                element.cubic((b[1][0], b[1][1]), (b[2][0], b[2][1]), (b[3][0], b[3][1]))
+                if len(b) == 4:
+                    element.cubic(
+                        (b[1][0], b[1][1]), (b[2][0], b[2][1]), (b[3][0], b[3][1])
+                    )
+                elif len(b) == 3:
+                    element.quad((b[1][0], b[1][1]), (b[2][0], b[2][1]))
         except (AttributeError, TypeError):
             # Fallback for rational b-splines.
             try:
-                for bezier in entity.construction_tool().cubic_bezier_approximation(4):
+                for bezier in entity.construction_tool().cubic_bezier_approximation(
+                        4
+                ):
                     b = bezier.control_points
-                    element.cubic((b[1][0], b[1][1]), (b[2][0], b[2][1]), (b[3][0], b[3][1]))
+                    if len(b) == 4:
+                        element.cubic(
+                            (b[1][0], b[1][1]),
+                            (b[2][0], b[2][1]),
+                            (b[3][0], b[3][1]),
+                        )
+                    elif len(b) == 3:
+                        element.quad((b[1][0], b[1][1]), (b[2][0], b[2][1]))
             except (AttributeError, TypeError):
                 # Fallback for versions of EZDXF prior to 0.13
                 element.move(entity.control_points[0])
