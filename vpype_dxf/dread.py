@@ -81,6 +81,8 @@ def dread(
         entity_to_svg(elements, dxf, entity, scale)
         if len(elements) > 1:
             new_color = elements[-1].stroke
+            if color is None:
+                color = new_color
             if color != new_color:
                 lc = i_trample_your_api(elements, quantization, simplify, parallel)
                 document.add(lc)
