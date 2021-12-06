@@ -66,7 +66,7 @@ from vpype.io import _convert_flattened_paths as i_trample_your_api
     "--groupby",
     type=str,
     default="color",
-    help="Classify layers based on given criteria. color, linewidth, linetype, thickness, transparency",
+    help="Classify layers based on given criteria. color, lineweight, linetype, thickness, transparency",
 )
 @vp.global_processor
 def dread(
