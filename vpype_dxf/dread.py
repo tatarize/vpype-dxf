@@ -54,6 +54,20 @@ from vpype.io import _convert_flattened_paths as i_trample_your_api
     default=False,
     help="Enable multiprocessing for curve conversion.",
 )
+@click.option(
+    "-Q",
+    "--query",
+    type=str,
+    default="*",
+    help="ezdxf query string. eg. 'LINE', 'LINE[layer==\"MyLayer\"]'",
+)
+@click.option(
+    "-g",
+    "--groupby",
+    type=str,
+    default="color",
+    help="Classify layers based on given criteria. color, lineweight, linetype, thickness, transparency",
+)
 @vp.global_processor
 def dread(
     document: vp.Document,
@@ -61,6 +75,8 @@ def dread(
     quantization: float,
     simplify: bool,
     parallel: bool,
+    query: str,
+    groupby: str,
 ) -> vp.Document:
     """
     Extract geometries from a DXF file.
@@ -76,22 +92,13 @@ def dread(
     else:
         scale = 1
 
-    color = None
-    for entity in dxf.entities:
-        entity_to_svg(elements, dxf, entity, scale)
-        if len(elements) > 1:
-            new_color = elements[-1].stroke
-            if color is None:
-                color = new_color
-            if color != new_color:
-                lc = i_trample_your_api(elements, quantization, simplify, parallel)
-                document.add(lc)
-                elements.clear()
-                color = new_color
-    if len(elements):
+    all_entities_by_attribute = dxf.query(query=query).groupby(groupby)
+    for group in all_entities_by_attribute.values():
+        for entity in group:
+            entity_to_svg(elements, dxf, entity, scale)
         lc = i_trample_your_api(elements, quantization, simplify, parallel)
-
         document.add(lc)
+        elements.clear()
     return document
 
 
@@ -99,6 +106,16 @@ dread.help_group = "DXF"
 
 
 def entity_to_svg(elements, dxf, entity, scale):
+    """
+    Entity to svg converts the ezdxf entity into a comparable svg element. This is used to
+    convert the data into a format vpype reads and can process.
+
+    :param elements:
+    :param dxf:
+    :param entity:
+    :param scale:
+    :return:
+    """
     element = None
     try:
         entity.transform_to_wcs(entity.ocs())
@@ -278,17 +295,13 @@ def entity_to_svg(elements, dxf, entity, scale):
                 if len(element) == 0:
                     element.move((b[0][0], b[0][1]))
                 if len(b) == 4:
-                    element.cubic(
-                        (b[1][0], b[1][1]), (b[2][0], b[2][1]), (b[3][0], b[3][1])
-                    )
+                    element.cubic((b[1][0], b[1][1]), (b[2][0], b[2][1]), (b[3][0], b[3][1]))
                 elif len(b) == 3:
                     element.quad((b[1][0], b[1][1]), (b[2][0], b[2][1]))
         except (AttributeError, TypeError):
             # Fallback for rational b-splines.
             try:
-                for bezier in entity.construction_tool().cubic_bezier_approximation(
-                        4
-                ):
+                for bezier in entity.construction_tool().cubic_bezier_approximation(4):
                     b = bezier.control_points
                     if len(b) == 4:
                         element.cubic(
@@ -314,6 +327,8 @@ def entity_to_svg(elements, dxf, entity, scale):
     else:
         return  # Might be something unsupported.
 
+    layer = dxf.layers.get(entity.dxf.layer)
+    # block = dxf.blocks.get(entity.dxf.block)
     if entity.rgb is not None:
         if isinstance(entity.rgb, tuple):
             element.stroke = Color(*entity.rgb)
@@ -321,26 +336,24 @@ def entity_to_svg(elements, dxf, entity, scale):
             element.stroke = Color(entity.rgb)
     else:
         c = entity.dxf.color
-        if c == 256:  # Bylayer.
-            if entity.dxf.layer in dxf.layers:
-                layer = dxf.layers.get(entity.dxf.layer)
-                c = layer.color
+        if c == ezdxf.const.BYLAYER:
+            c = layer.color
         try:
-            if c == 7:
+            if c == ezdxf.const.BLACK:
+                # Color 7 is black on light backgrounds, light on black.
                 color = Color(
                     "black"
-                )  # Color 7 is black on light backgrounds, light on black.
+                )
             else:
                 color = Color(*int2rgb(DXF_DEFAULT_COLORS[c]))
         except:
             color = Color("black")
         element.stroke = color
     element.transform.post_scale(scale, -scale)
-
+    element.values[SVG_ATTR_VECTOR_EFFECT] = SVG_VALUE_NON_SCALING_STROKE
     if isinstance(element, SVGText):
         elements.append(element)
     else:
-        element.values[SVG_ATTR_VECTOR_EFFECT] = SVG_VALUE_NON_SCALING_STROKE
         path = abs(Path(element))
         if len(path) != 0:
             if not isinstance(path[0], Move):
