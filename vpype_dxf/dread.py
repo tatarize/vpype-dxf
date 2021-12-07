@@ -351,17 +351,6 @@ def entity_to_svg(elements, dxf, entity, scale):
         element.stroke = color
     element.transform.post_scale(scale, -scale)
     element.values[SVG_ATTR_VECTOR_EFFECT] = SVG_VALUE_NON_SCALING_STROKE
-
-    element.stroke_width = entity.dxf.lineweight
-    if element.stroke_width == ezdxf.const.LINEWEIGHT_BYLAYER:
-        element.stroke_width = layer.dxf.lineweight
-    if element.stroke_width == ezdxf.const.LINEWEIGHT_BYBLOCK:
-        element.stroke_width = 1.0  # Unknown
-    if element.stroke_width == ezdxf.const.LINEWEIGHT_DEFAULT:
-        element.stroke_width = 1.0
-    element.linetype = entity.dxf.linetype
-    element.thickness = entity.dxf.thickness
-
     if isinstance(element, SVGText):
         elements.append(element)
     else:
