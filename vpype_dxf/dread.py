@@ -1,6 +1,9 @@
+import pathlib
+
 import click
 import ezdxf
 import vpype as vp
+import vpype_cli
 from ezdxf import units
 try:
     # ezdxf <= 0.6.14
@@ -26,17 +29,17 @@ from svgelements import (
     SVGImage,
     SVGText,
 )
-from vpype.io import _convert_flattened_paths as i_trample_your_api
+from vpype.io import _flattened_paths_to_line_collection as i_trample_your_api
 
 # Loadtype: "Drawing Exchange Format", ("dxf",), "image/vnd.dxf"
 
 
 @click.command()
-@click.argument("file", type=click.Path(exists=True, dir_okay=False))
+@click.argument("file", type=vpype_cli.PathType(exists=True, dir_okay=False))
 @click.option(
     "-q",
     "--quantization",
-    type=vp.LengthType(),
+    type=vpype_cli.LengthType(),
     default="0.1mm",
     help="Maximum length of segments approximating curved elements (default: 0.1mm).",
 )
@@ -57,18 +60,18 @@ from vpype.io import _convert_flattened_paths as i_trample_your_api
 @click.option(
     "-Q",
     "--query",
-    type=str,
+    type=vpype_cli.TextType(),
     default="*",
     help="ezdxf query string. eg. 'LINE', 'LINE[layer==\"MyLayer\"]'",
 )
 @click.option(
     "-g",
     "--groupby",
-    type=str,
+    type=vpype_cli.TextType(),
     default="color",
     help="Classify layers based on given criteria. color, lineweight, linetype, thickness, transparency",
 )
-@vp.global_processor
+@vpype_cli.global_processor
 def dread(
     document: vp.Document,
     file,
@@ -81,6 +84,11 @@ def dread(
     """
     Extract geometries from a DXF file.
     """
+
+    # populate the vp_source[s] properties
+    document.set_property(vp.METADATA_FIELD_SOURCE, pathlib.Path(file).absolute())
+    document.add_to_sources(file)
+
     dxf = ezdxf.readfile(file)
     elements = []
     unit = dxf.header.get("$INSUNITS")

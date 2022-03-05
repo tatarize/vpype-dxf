@@ -22,7 +22,7 @@ setup(
     ),
     install_requires=[
         "click",
-        "vpype",
+        "vpype>=1.9,<2.0",
         "numpy",
         "ezdxf>=0.14.0",
         "svgelements>=1.4.0"
