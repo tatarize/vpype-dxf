@@ -3,6 +3,8 @@
 
 Adds command dread (dxf-read) that reads dxf files and into the vpype pipeline.
 
+See: https://github.com/abey79/vpype for vpype.
+
 # ezdxf
 
 Ezdxf is used as the backend of this project. The `-Q`/`--query` feed directly into the [query field](https://ezdxf.readthedocs.io/en/stable/usage_for_beginners.html#query-dxf-entities) of the ezdxf query(), and the `-g`/`--groupby` option is directly in the groupby value. This will allow you to use *any* valid ezdxf properties to [groupby](https://ezdxf.readthedocs.io/en/stable/layouts/layouts.html#ezdxf.layouts.BaseLayout.groupby). The defaults are `*` for query and `color` for groupby.
